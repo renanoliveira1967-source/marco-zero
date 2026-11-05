@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de Confiabilidade (exemplo) | Marco Zero</title>
+<meta name="description" content="Exemplo de painel de confiabilidade para uma fábrica de fertilizantes: disponibilidade, MTBF, MTTR, bad actors, backlog e plano de ação. Dados fictícios.">
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --surface: #ffffff;
+    --ink: #14202b;
+    --muted: #55626e;
+    --line: #dcdad3;
+    --brand: #12324a;
+    --brand-ink: #ffffff;
+    --accent: #e2711d;
+    --accent-ink: #1a0f05;
+    --radius: 10px;
+    --maxw: 1180px;
+    /* dataviz */
+    --s1: #2a78d6;   /* azul  */
+    --s2: #eb6834;   /* laranja */
+    --s3: #1baf7a;   /* aqua  */
+    --grid: #e6e4dd;
+    --good: #0ca30c;
+    --warn: #fab219;
+    --crit: #d03b3b;
+    --good-ink: #006300;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1820;
+      --surface: #16222d;
+      --ink: #e8ecef;
+      --muted: #9aa8b4;
+      --line: #263644;
+      --brand: #0b2233;
+      --accent: #f08a3c;
+      --s1: #3987e5;
+      --s2: #d95926;
+      --s3: #199e70;
+      --grid: #223140;
+      --good-ink: #0ca30c;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  a { color: inherit; }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 16px; }
+  h1, h2, h3 { line-height: 1.2; margin: 0 0 .4em; letter-spacing: -.01em; }
+  h1 { font-size: clamp(1.8rem, 4.4vw, 2.7rem); }
+  h2 { font-size: 1.15rem; }
+  h3 { font-size: 1rem; }
+  p { margin: 0 0 1em; }
+  .eyebrow { display: inline-block; font-size: .78rem; font-weight: 700; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: .6rem; }
+  .muted { color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* header */
+  header.top { position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; align-items: center; justify-content: space-between; height: 62px; gap: 12px; }
+  .logo { font-weight: 800; letter-spacing: .04em; text-decoration: none; display: flex; align-items: center; gap: 10px; font-size: .95rem; }
+  .logo i { width: 14px; height: 14px; background: var(--accent); display: inline-block; transform: rotate(45deg); }
+  .top nav { display: flex; gap: 18px; align-items: center; }
+  .top nav a.back { text-decoration: none; font-size: .95rem; color: var(--muted); }
+  .top nav a.back:hover { color: var(--ink); }
+  .btn { display: inline-block; text-decoration: none; font-weight: 700; padding: .5em 1em; border-radius: var(--radius);
+    border: 2px solid transparent; background: var(--accent); color: var(--accent-ink); white-space: nowrap; cursor: pointer; font: inherit; font-weight: 700; }
+  .btn:hover { filter: brightness(1.06); }
+  .btn.ghost { background: transparent; color: inherit; border-color: currentColor; }
+
+  /* hero */
+  .hero { background: var(--brand); color: var(--brand-ink); padding: 40px 0 34px; }
+  .hero .row { display: flex; gap: 24px; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; }
+  .hero p.lead { color: #cfdbe5; max-width: 44em; margin: 0; }
+  .badge { display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,.35);
+    border-radius: 99px; padding: .3em .9em; font-size: .85rem; font-weight: 700; color: #fff; background: rgba(255,255,255,.08); }
+  .badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .hero .meta { text-align: right; color: #cfdbe5; font-size: .9rem; display: grid; gap: 8px; justify-items: end; }
+
+  /* controls */
+  .controls { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: center; padding: 18px 0 6px; }
+  .ctl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ctl > span { font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); flex-wrap: wrap; }
+  .seg button { font: inherit; font-size: .88rem; background: transparent; color: var(--ink); border: 0; padding: .45em .9em; cursor: pointer;
+    border-right: 1px solid var(--line); min-height: 36px; }
+  .seg button:last-child { border-right: 0; }
+  .seg button:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+  .seg button[aria-pressed="true"] { background: var(--brand); color: #fff; font-weight: 700; }
+  @media (prefers-color-scheme: dark) { .seg button[aria-pressed="true"] { background: var(--s1); } }
+  button:focus-visible, a:focus-visible, tr:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  /* cards & grid */
+  main { padding-bottom: 40px; }
+  .grid { display: grid; gap: 16px; margin-top: 16px; }
+  .kpis { grid-template-columns: repeat(6, 1fr); }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: 1.15fr 1fr 1fr; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; min-width: 0; }
+  .card-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+  .card-h p { margin: 0; font-size: .85rem; color: var(--muted); }
+  .scope { font-size: .72rem; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 0 .6em; }
+
+  /* KPI */
+  .kpi { display: flex; flex-direction: column; gap: 2px; padding: 16px; }
+  .k-l { font-size: .8rem; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
+  .k-v { font-size: 2rem; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .k-v small { font-size: .9rem; font-weight: 600; color: var(--muted); margin-left: 3px; }
+  .k-m { font-size: .8rem; color: var(--muted); min-height: 1.3em; }
+  .kpi .spark { margin-top: 8px; width: 100%; max-width: 170px; height: auto; display: block; }
+  .kpi .pill { align-self: flex-start; margin-top: 6px; }
+
+  /* status */
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; font-weight: 600; border: 1px solid var(--line);
+    border-radius: 99px; padding: .1em .65em .1em .5em; background: var(--bg); color: var(--ink); white-space: nowrap; }
+  .ic { width: 10px; height: 10px; display: inline-block; flex: none; }
+  .ic.ok { background: var(--good); border-radius: 50%; }
+  .ic.warn { background: var(--warn); clip-path: polygon(50% 0, 100% 100%, 0 100%); width: 11px; height: 10px; }
+  .ic.crit { background: var(--crit); border-radius: 2px; }
+
+  /* charts */
+  .chart { position: relative; width: 100%; }
+  .chart svg { display: block; width: 100%; overflow: visible; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .82rem; color: var(--muted); margin-bottom: 6px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .sw.line { height: 3px; border-radius: 2px; width: 16px; }
+  .sw.dash { height: 0; border-top: 2px dashed var(--muted); border-radius: 0; width: 16px; }
+  .ax { fill: var(--muted); font-size: 11px; font-family: inherit; }
+  #tip { position: fixed; z-index: 60; pointer-events: none; background: var(--ink); color: var(--bg); padding: 8px 10px;
+    border-radius: 8px; font-size: .8rem; line-height: 1.45; max-width: 260px; box-shadow: 0 6px 20px rgba(0,0,0,.25);
+    opacity: 0; transition: opacity .08s; }
+  #tip.on { opacity: 1; }
+  #tip b { font-weight: 700; }
+
+  /* bars (html) */
+  .bars { display: grid; gap: 9px; }
+  .bar-row { display: grid; grid-template-columns: minmax(110px, 190px) 1fr 84px; gap: 10px; align-items: center; font-size: .88rem; padding: 2px 0; border-radius: 6px; }
+  .bar-row:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  .bar-label { line-height: 1.25; min-width: 0; }
+  .bar-label small { display: block; color: var(--muted); font-size: .75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { height: 14px; }
+  .bar-fill { height: 100%; background: var(--s1); border-radius: 0 4px 4px 0; min-width: 2px; }
+  .bar-val { text-align: right; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .bar-val small { display: block; color: var(--muted); font-size: .72rem; }
+  .note { font-size: .85rem; color: var(--muted); margin: 12px 0 0; }
+  .note b { color: var(--ink); }
+
+  /* table */
+  .tbl-wrap { overflow-x: auto; margin: 0 -18px; padding: 0 18px; }
+  table { width: 100%; border-collapse: collapse; font-size: .88rem; min-width: 640px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  th button { all: unset; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
+  th button:hover { color: var(--ink); }
+  th button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  th[aria-sort="ascending"] button::after { content: "↑"; }
+  th[aria-sort="descending"] button::after { content: "↓"; }
+  td.r, th.r { text-align: right; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  td .tag { font-weight: 700; }
+  td small { display: block; color: var(--muted); font-size: .76rem; }
+  .crit-badge { display: inline-block; font-weight: 700; font-size: .75rem; border: 1px solid var(--line); border-radius: 5px; padding: 0 .5em; }
+  .mini { display: block; }
+  .mini rect { fill: var(--s1); }
+
+  /* backlog */
+  .stackbar { display: flex; gap: 2px; height: 22px; margin: 8px 0 8px; }
+  .stackbar div { height: 100%; border-radius: 3px; }
+  .rows { display: grid; gap: 6px; font-size: .88rem; margin-top: 10px; }
+  .rows div { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px dashed var(--line); padding-bottom: 5px; }
+  .rows div span:last-child { font-variant-numeric: tabular-nums; color: var(--muted); }
+  .rows i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; }
+
+  /* acoes */
+  .acts { display: grid; gap: 14px; }
+  .act { font-size: .88rem; }
+  .act-h { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; align-items: baseline; }
+  .act-h b { font-weight: 700; }
+  .prog { height: 8px; background: var(--grid); border-radius: 4px; overflow: hidden; }
+  .prog div { height: 100%; background: var(--s1); border-radius: 4px; }
+  .act small { color: var(--muted); display: block; margin-top: 3px; }
+
+  details.tv { margin-top: 16px; }
+  details.tv summary { cursor: pointer; font-weight: 700; font-size: .9rem; }
+  details.tv .tbl-wrap { margin-top: 10px; }
+
+  /* dialog */
+  dialog { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink); padding: 0;
+    width: min(640px, calc(100% - 24px)); max-height: calc(100dvh - 32px); }
+  dialog::backdrop { background: rgba(8, 16, 24, .55); }
+  .dlg { padding: 20px; }
+  .dlg-h { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 8px; }
+  .dlg-h h2 { font-size: 1.3rem; margin: 0; }
+  .x { all: unset; cursor: pointer; font-size: 1.6rem; line-height: 1; padding: 2px 10px; border-radius: 8px; color: var(--muted); }
+  .x:hover { background: var(--bg); color: var(--ink); }
+  .x:focus-visible { outline: 3px solid var(--accent); }
+  .mini-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0; }
+  .mini-kpis div { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+  .mini-kpis small { display: block; color: var(--muted); font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .mini-kpis b { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+  .reco { background: var(--bg); border-left: 4px solid var(--accent); border-radius: 6px; padding: 10px 12px; font-size: .92rem; margin-top: 14px; }
+
+  /* CTA / footer */
+  .cta { background: var(--brand); color: var(--brand-ink); text-align: center; padding: 48px 0; }
+  .cta p { color: #cfdbe5; max-width: 38em; margin: 0 auto 1.2em; }
+  .cta .btn { padding: .75em 1.3em; }
+  .cta .btn.ghost { color: #fff; }
+  .cta .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  footer { padding: 22px 0; color: var(--muted); font-size: .88rem; }
+
+  @media (max-width: 1060px) {
+    .kpis { grid-template-columns: repeat(3, 1fr); }
+    .g3 { grid-template-columns: 1fr 1fr; }
+    .g3 > :first-child { grid-column: 1 / -1; }
+  }
+  @media (max-width: 760px) {
+    .g2, .g3 { grid-template-columns: 1fr; }
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .hero .meta { text-align: left; justify-items: start; }
+    .bar-row { grid-template-columns: minmax(90px, 130px) 1fr 70px; }
+    .mini-kpis { grid-template-columns: repeat(2, 1fr); }
+    th.hide-s, td.hide-s { display: none; }
+    table { min-width: 0; }
+    .top nav a.back span { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } #tip { transition: none; } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="index.html"><i></i><span>MARCO ZERO</span></a>
+    <nav aria-label="Principal">
+      <a class="back" href="index.html">← <span>Voltar ao </span>site</a>
+      <a class="btn" href="index.html#contato">Fale conosco</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap row">
+    <div>
+      <span class="eyebrow">Exemplo de painel de gestão</span>
+      <h1>Painel de confiabilidade</h1>
+      <p class="lead">Planta modelo de fertilizantes com 15 equipamentos críticos: disponibilidade, MTBF, MTTR, bad actors, backlog e plano de ação. É assim que organizamos os números para o time decidir onde agir primeiro.</p>
+    </div>
+    <div class="meta">
+      <span class="badge">Exemplo · dados fictícios</span>
+      <span>Referência: nov/2025 a out/2026</span>
+    </div>
+  </div>
+</section>
+
+<main class="wrap" id="app">
+
+  <div class="controls">
+    <div class="ctl" role="group" aria-label="Período">
+      <span>Período</span>
+      <div class="seg" id="seg-period">
+        <button type="button" data-n="3" aria-pressed="false">3 meses</button>
+        <button type="button" data-n="6" aria-pressed="false">6 meses</button>
+        <button type="button" data-n="12" aria-pressed="true">12 meses</button>
+      </div>
+    </div>
+    <div class="ctl" role="group" aria-label="Área da planta">
+      <span>Área</span>
+      <div class="seg" id="seg-area"></div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid kpis" id="kpis" aria-label="Indicadores principais"></div>
+
+  <!-- Tendências -->
+  <div class="grid g2">
+    <section class="card" aria-labelledby="t-disp">
+      <div class="card-h">
+        <div><h2 id="t-disp">Disponibilidade por mês</h2><p>Horas paradas por falha sobre horas do calendário</p></div>
+      </div>
+      <div class="legend"><span><i class="sw line" style="background:var(--s1)"></i>Realizado</span><span><i class="sw dash"></i>Meta</span></div>
+      <div class="chart" id="ch-disp"></div>
+    </section>
+    <section class="card" aria-labelledby="t-mtbf">
+      <div class="card-h">
+        <div><h2 id="t-mtbf">MTBF (tempo médio entre falhas)</h2><p>Em dias, média móvel de 3 meses</p></div>
+      </div>
+      <div class="legend"><span><i class="sw line" style="background:var(--s1)"></i>Realizado</span><span><i class="sw dash"></i>Meta</span></div>
+      <div class="chart" id="ch-mtbf"></div>
+    </section>
+  </div>
+
+  <!-- Pareto / causas -->
+  <div class="grid g2">
+    <section class="card" aria-labelledby="t-par">
+      <div class="card-h">
+        <div><h2 id="t-par">Bad actors</h2><p>Quem mais pesa no período, pelos dois critérios</p></div>
+        <div class="seg" id="seg-metric">
+          <button type="button" data-m="down" aria-pressed="true">Horas paradas</button>
+          <button type="button" data-m="fail" aria-pressed="false">Nº de falhas</button>
+        </div>
+      </div>
+      <div class="bars" id="pareto"></div>
+      <p class="note" id="pareto-note"></p>
+    </section>
+    <section class="card" aria-labelledby="t-cau">
+      <div class="card-h">
+        <div><h2 id="t-cau">Causas das falhas</h2><p>Participação no total de falhas do período</p></div>
+      </div>
+      <div class="bars" id="causes"></div>
+      <p class="note" id="causes-note"></p>
+    </section>
+  </div>
+
+  <!-- Tabela de equipamentos -->
+  <section class="card" style="margin-top:16px" aria-labelledby="t-eq">
+    <div class="card-h">
+      <div><h2 id="t-eq">Equipamentos</h2><p>Clique em uma linha para ver modos de falha e ação recomendada. Meta de disponibilidade: classe A 97%, B 95%, C 92%.</p></div>
+    </div>
+    <div class="tbl-wrap">
+      <table id="eq-table">
+        <thead><tr>
+          <th scope="col" data-k="tag"><button type="button">Equipamento</button></th>
+          <th scope="col" class="hide-s" data-k="area"><button type="button">Área</button></th>
+          <th scope="col" data-k="crit"><button type="button">Classe</button></th>
+          <th scope="col" class="r" data-k="disp"><button type="button">Disp.</button></th>
+          <th scope="col" class="r" data-k="mtbf"><button type="button">MTBF (d)</button></th>
+          <th scope="col" class="r hide-s" data-k="mttr"><button type="button">MTTR (h)</button></th>
+          <th scope="col" class="r" data-k="fail"><button type="button">Falhas</button></th>
+          <th scope="col" class="hide-s">Falhas/mês</th>
+          <th scope="col" data-k="st"><button type="button">Status</button></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Manutenção, backlog, ações -->
+  <div class="grid g3">
+    <section class="card" aria-labelledby="t-mix">
+      <div class="card-h">
+        <div><h2 id="t-mix">Perfil da manutenção</h2><p>% das horas de manutenção · toda a planta</p></div>
+      </div>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--s1)"></i>Preventiva</span>
+        <span><i class="sw" style="background:var(--s3)"></i>Preditiva</span>
+        <span><i class="sw" style="background:var(--s2)"></i>Corretiva</span>
+      </div>
+      <div class="chart" id="ch-mix"></div>
+    </section>
+
+    <section class="card" aria-labelledby="t-bl">
+      <div class="card-h">
+        <div><h2 id="t-bl">Backlog atual</h2><p>1.240 HH · 152 OS · 4,0 semanas de trabalho</p></div>
+      </div>
+      <h3 style="font-size:.85rem" class="muted">Por prioridade</h3>
+      <div class="stackbar" id="bl-prio" role="img" aria-label="Backlog por prioridade em horas-homem"></div>
+      <div class="rows" id="bl-prio-rows"></div>
+      <h3 style="font-size:.85rem;margin-top:16px" class="muted">Por idade da OS</h3>
+      <div class="stackbar" id="bl-age" role="img" aria-label="Backlog por idade em horas-homem"></div>
+      <div class="rows" id="bl-age-rows"></div>
+    </section>
+
+    <section class="card" aria-labelledby="t-act">
+      <div class="card-h">
+        <div><h2 id="t-act">Plano de ação (RCA)</h2><p>Ações de melhoria sobre os bad actors</p></div>
+      </div>
+      <div class="acts" id="acts"></div>
+    </section>
+  </div>
+
+  <details class="tv card">
+    <summary>Ver os dados mensais em tabela</summary>
+    <div class="tbl-wrap"><table id="month-table" style="min-width:720px"></table></div>
+  </details>
+
+  <p class="note" style="margin-top:18px">
+    <b>Como os números são calculados.</b> Disponibilidade = (horas do calendário − horas paradas por falha) ÷ horas do calendário.
+    MTBF = horas em operação ÷ número de falhas. MTTR = horas paradas ÷ número de falhas. Aderência = % das ordens programadas que foram executadas na semana.
+    Todos os valores desta página são fictícios e servem apenas para demonstrar o formato do painel.
+  </p>
+</main>
+
+<section class="cta">
+  <div class="wrap">
+    <h2 style="font-size:1.6rem">Quer um painel como este com os dados da sua planta?</h2>
+    <p>Montamos o painel a partir das suas ordens de manutenção e registros de falha, com metas e alertas definidos junto com o seu time.</p>
+    <div class="actions">
+      <a class="btn" href="index.html#contato">Agendar uma conversa</a>
+      <a class="btn ghost" href="index.html">Voltar ao site</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">© 2026 Marco Zero Consultoria Industrial · Exemplo com dados fictícios</div>
+</footer>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<dialog id="dlg" aria-labelledby="dlg-title"></dialog>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ================= DADOS FICTÍCIOS ================= */
+  var MONTHS = ['nov/25','dez/25','jan/26','fev/26','mar/26','abr/26','mai/26','jun/26','jul/26','ago/26','set/26','out/26'];
+  var DAYS   = [30,31,31,28,31,30,31,30,31,31,30,31];
+  var AREAS  = { rec: 'Recebimento e moagem', gra: 'Granulação e secagem', aci: 'Ácidos e utilidades', exp: 'Ensaque e expedição' };
+  var META_DISP = { A: 97, B: 95, C: 92 };
+  var CAUSES = ['Mecânica','Lubrificação','Processo','Instrumentação','Elétrica','Operação'];
+
+  // f = falhas por mês (nov/25 → out/26) · mttr = horas médias de reparo por falha
+  var EQ = [
+    { tag:'BA-401', nome:'Bomba de ácido sulfúrico', area:'aci', crit:'A', mttr:9,
+      f:[4,3,4,4,5,3,4,4,4,3,5,5],
+      modes:[['Vazamento no selo mecânico','Mecânica',.55],['Corrosão do rotor','Processo',.2],['Cavitação por baixo nível no tanque','Operação',.15],['Falha no medidor de vazão','Instrumentação',.1]],
+      acao:'Principal bad actor da planta. Trocar para selo duplo com sistema de flush e revisar o material do rotor. RCA em andamento.', prox:'Instalação do selo duplo — 30/11/2026' },
+    { tag:'GR-301', nome:'Granulador de tambor', area:'gra', crit:'A', mttr:20,
+      f:[2,2,2,2,1,1,1,1,1,0,1,0],
+      modes:[['Desgaste dos rolos de apoio','Mecânica',.4],['Vibração no redutor','Lubrificação',.3],['Incrustação de material no tambor','Processo',.3]],
+      acao:'A inspeção preditiva padronizada derrubou as falhas de 2 por mês para 0 ou 1. Manter o acompanhamento e evitar reparos longos.', prox:'Análise de vibração — 10/11/2026' },
+    { tag:'EC-304', nome:'Elevador de canecas', area:'gra', crit:'A', mttr:14,
+      f:[1,1,1,1,2,1,2,2,2,2,3,2],
+      modes:[['Canecas soltas por falha de fixação','Mecânica',.4],['Desalinhamento da correia','Mecânica',.3],['Sobrecarga na alimentação','Operação',.3]],
+      acao:'Tendência de piora nos últimos 6 meses. Abrir RCA: revisar a fixação das canecas e o controle da alimentação.', prox:'Inspeção interna — 14/11/2026' },
+    { tag:'SR-302', nome:'Secador rotativo', area:'gra', crit:'A', mttr:12,
+      f:[1,0,1,1,0,1,0,1,0,0,1,0],
+      modes:[['Falha de chama no queimador','Instrumentação',.4],['Desgaste do aro de rolamento','Mecânica',.35],['Queda de tensão no acionamento','Elétrica',.25]],
+      acao:'Revisar o intertravamento do queimador e calibrar os sensores de chama.', prox:'Calibração dos sensores — 25/11/2026' },
+    { tag:'TC-101', nome:'Transportador de correia (recebimento)', area:'rec', crit:'A', mttr:6,
+      f:[1,1,0,1,0,0,1,0,0,0,0,0],
+      modes:[['Desalinhamento e desgaste da correia','Mecânica',.5],['Rolete travado','Lubrificação',.3],['Acúmulo no raspador','Operação',.2]],
+      acao:'Equipamento estável. Manter a inspeção de roletes por termografia.', prox:'Inspeção preditiva — 12/11/2026' },
+    { tag:'MB-201', nome:'Moinho de bolas', area:'rec', crit:'A', mttr:14,
+      f:[0,1,0,0,1,0,0,0,1,0,0,0],
+      modes:[['Desgaste do revestimento interno','Mecânica',.45],['Temperatura alta no mancal','Lubrificação',.35],['Falha no acionamento elétrico','Elétrica',.2]],
+      acao:'Programar a troca de revestimento na próxima parada geral e coletar óleo do mancal todo mês.', prox:'Análise de óleo — 20/11/2026' },
+    { tag:'AG-403', nome:'Agitador do reator', area:'aci', crit:'A', mttr:24,
+      f:[0,0,1,0,0,0,0,1,0,0,0,1],
+      modes:[['Falha no redutor','Lubrificação',.4],['Desgaste da vedação do eixo','Mecânica',.4],['Desarme por sobrecorrente','Elétrica',.2]],
+      acao:'Poucas falhas, mas reparo longo (24 h). Manter redutor sobressalente e análise de óleo trimestral.', prox:'Análise de óleo — 03/12/2026' },
+    { tag:'EX-501', nome:'Exaustor do lavador de gases', area:'aci', crit:'A', mttr:30,
+      f:[0,1,0,1,0,0,1,0,0,1,0,1],
+      modes:[['Desbalanceamento por incrustação no rotor','Processo',.5],['Falha de mancal','Lubrificação',.3],['Falha no inversor de frequência','Elétrica',.2]],
+      acao:'Monitorar a vibração online e programar a limpeza do rotor na próxima janela.', prox:'Limpeza do rotor — 08/12/2026' },
+    { tag:'BA-402', nome:'Bomba de amônia', area:'aci', crit:'A', mttr:7,
+      f:[1,1,0,1,0,1,1,0,1,0,1,0],
+      modes:[['Vazamento no selo','Mecânica',.5],['Falha no motor','Elétrica',.3],['Válvula de bloqueio travada','Instrumentação',.2]],
+      acao:'Manter a preventiva. Avaliar monitoramento de vazamento no selo.', prox:'Preventiva — 18/11/2026' },
+    { tag:'PV-303', nome:'Peneira vibratória', area:'gra', crit:'B', mttr:4,
+      f:[4,3,4,3,3,3,2,3,2,2,2,2],
+      modes:[['Quebra de mola ou coxim','Mecânica',.45],['Rasgo na tela','Mecânica',.3],['Entupimento da tela','Processo',.25]],
+      acao:'Muitas falhas de baixo impacto, já caindo. Padronizar o kit de molas e telas e manter sobressalente em estoque.', prox:'Troca do kit — 20/11/2026' },
+    { tag:'RD-305', nome:'Redler (transportador de arraste)', area:'gra', crit:'B', mttr:8,
+      f:[2,2,2,1,2,2,1,2,1,1,1,1],
+      modes:[['Desgaste de corrente e arraste','Mecânica',.55],['Falta de lubrificação','Lubrificação',.25],['Sobrecarga do motor','Elétrica',.2]],
+      acao:'Medir o alongamento da corrente a cada trimestre e planejar a troca antes da falha.', prox:'Medição de corrente — 30/11/2026' },
+    { tag:'ES-701', nome:'Ensacadeira', area:'exp', crit:'B', mttr:3,
+      f:[5,5,4,5,4,4,4,3,4,3,3,3],
+      modes:[['Falha no sensor de peso','Instrumentação',.35],['Obstrução do bico','Operação',.35],['Desgaste da mandíbula de costura','Mecânica',.3]],
+      acao:'Alta frequência e baixo impacto. Treinar a operação em setup e limpeza e padronizar peças de reposição.', prox:'Treinamento da operação — 10/01/2027' },
+    { tag:'TC-102', nome:'Transportador de correia (expedição)', area:'exp', crit:'B', mttr:5,
+      f:[2,2,2,1,1,2,1,1,1,1,1,0],
+      modes:[['Rolete travado','Lubrificação',.4],['Emenda da correia','Mecânica',.35],['Sensor de desalinhamento','Instrumentação',.25]],
+      acao:'Incluir os roletes na rota de lubrificação semanal.', prox:'Rota de lubrificação — 12/11/2026' },
+    { tag:'CP-601', nome:'Compressor de ar de instrumentos', area:'aci', crit:'B', mttr:20,
+      f:[0,0,1,0,0,0,1,0,0,0,0,0],
+      modes:[['Válvula de sucção','Mecânica',.5],['Pressostato com defeito','Instrumentação',.5]],
+      acao:'Poucas falhas, mas reparo longo. Avaliar compressor reserva.', prox:'Preventiva de 8.000 h — 05/12/2026' },
+    { tag:'VT-502', nome:'Ventilador do resfriador', area:'gra', crit:'C', mttr:6,
+      f:[0,1,0,0,1,0,0,0,1,0,0,0],
+      modes:[['Desbalanceamento','Mecânica',.5],['Correia de acionamento','Mecânica',.3],['Térmico do motor','Elétrica',.2]],
+      acao:'Classe C: operar até a falha, com sobressalente em estoque.', prox:'Rota de lubrificação — 15/11/2026' }
+  ];
+
+  // Dados de planta (não dependem do filtro de área)
+  var ADER  = [84,86,85,88,87,90,91,89,92,93,92,94];                 // % aderência ao plano
+  var BKLG  = [6.8,6.5,6.4,6.0,5.6,5.3,5.1,4.9,4.6,4.4,4.2,4.0];     // semanas de backlog
+  var MIX_PREV = [38,39,40,41,43,44,46,47,48,50,51,52];
+  var MIX_PRED = [14,14,15,15,16,17,17,18,19,19,20,21];
+  var MIX_CORR = MIX_PREV.map(function (v, i) { return 100 - v - MIX_PRED[i]; });
+
+  var BL_PRIO = [['Urgente (até 7 dias)', 96, 9], ['Alta (até 30 dias)', 410, 38], ['Média (até 90 dias)', 520, 64], ['Baixa', 214, 41]];
+  var BL_AGE  = [['Até 30 dias', 520], ['31 a 60 dias', 360], ['61 a 90 dias', 210], ['Mais de 90 dias', 150]];
+
+  var ACTS = [
+    ['BA-401', 'Selo duplo com flush e revisão de material do rotor', 60, 'Prazo 30/11/2026 · Engenharia de confiabilidade'],
+    ['EC-304', 'Revisar fixação das canecas e controle de alimentação', 35, 'Prazo 15/12/2026 · Manutenção mecânica'],
+    ['PV-303', 'Kit padrão de molas e telas com estoque mínimo', 80, 'Prazo 20/11/2026 · Planejamento'],
+    ['ES-701', 'Treinar operação em setup e limpeza do bico', 20, 'Prazo 10/01/2027 · Operação'],
+    ['GR-301', 'Inspeção preditiva padronizada dos rolos de apoio', 100, 'Concluída em 30/09/2026 · Preditiva']
+  ];
+
+  /* ================= ESTADO E CÁLCULOS ================= */
+  var state = { n: 12, area: 'all', sort: { k: 'disp', dir: 1 }, metric: 'down' };
+  var $ = function (s) { return document.querySelector(s); };
+  var fmt = function (v, d) { return v == null ? '—' : v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }); };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+
+  function list() { return EQ.filter(function (e) { return state.area === 'all' || e.area === state.area; }); }
+
+  function calc(e, n) {
+    var hc = 0, fail = 0, down = 0;
+    for (var i = 12 - n; i < 12; i++) { hc += DAYS[i] * 24; fail += e.f[i]; down += e.f[i] * e.mttr; }
+    return { hc: hc, fail: fail, down: down,
+      disp: (1 - down / hc) * 100,
+      mtbf: fail ? (hc - down) / fail / 24 : null,
+      mttr: fail ? down / fail : null };
+  }
+  function agg(l, n) {
+    var hc = 0, fail = 0, down = 0;
+    l.forEach(function (e) { var c = calc(e, n); hc += c.hc; fail += c.fail; down += c.down; });
+    return { hc: hc, fail: fail, down: down,
+      disp: hc ? (1 - down / hc) * 100 : null,
+      mtbf: fail ? (hc - down) / fail / 24 : null,
+      mttr: fail ? down / fail : null };
+  }
+  // séries mensais (12 meses) para o conjunto filtrado
+  function monthly(l) {
+    var out = { disp: [], fail: [], mtbf: [], mttr: [] };
+    for (var i = 0; i < 12; i++) {
+      var hc = 0, down = 0, fail = 0, hc3 = 0, down3 = 0, fail3 = 0;
+      l.forEach(function (e) {
+        hc += DAYS[i] * 24; down += e.f[i] * e.mttr; fail += e.f[i];
+        for (var j = Math.max(0, i - 2); j <= i; j++) { hc3 += DAYS[j] * 24; down3 += e.f[j] * e.mttr; fail3 += e.f[j]; }
+      });
+      out.disp.push(hc ? (1 - down / hc) * 100 : null);
+      out.fail.push(fail);
+      out.mtbf.push(fail3 ? (hc3 - down3) / fail3 / 24 : null);
+      out.mttr.push(fail3 ? down3 / fail3 : null);
+    }
+    return out;
+  }
+  function eqStatus(e, c) {
+    var m = META_DISP[e.crit];
+    return c.disp >= m ? 'ok' : (c.disp >= m - 1.5 ? 'warn' : 'crit');
+  }
+  var ST = { ok: 'Na meta', warn: 'Atenção', crit: 'Fora da meta' };
+  var ST_ORD = { crit: 0, warn: 1, ok: 2 };
+  function pill(s) { return '<span class="pill"><i class="ic ' + s + '"></i>' + ST[s] + '</span>'; }
+  function avg(a) { return a.reduce(function (x, y) { return x + y; }, 0) / a.length; }
+
+  /* ================= TOOLTIP ================= */
+  var tip = $('#tip');
+  function showTip(html, x, y) {
+    tip.innerHTML = html; tip.classList.add('on');
+    var w = tip.offsetWidth, h = tip.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
+    var left = x + 14, top = y + 14;
+    if (left + w > vw - 8) left = x - w - 14;
+    if (left < 8) left = 8;
+    if (top + h > vh - 8) top = y - h - 14;
+    if (top < 8) top = 8;
+    tip.style.left = left + 'px'; tip.style.top = top + 'px';
+  }
+  function hideTip() { tip.classList.remove('on'); }
+  document.addEventListener('pointermove', function (ev) {
+    var t = ev.target.closest && ev.target.closest('[data-tip]');
+    if (t) showTip(t.getAttribute('data-tip'), ev.clientX, ev.clientY);
+    else if (!ev.target.closest || !ev.target.closest('.chart')) hideTip();
+  });
+  document.addEventListener('scroll', hideTip, true);
+
+  /* ================= SPARKLINE / MINI ================= */
+  function spark(vals) {
+    var w = 150, h = 34, v = vals.filter(function (x) { return x != null; });
+    var mn = Math.min.apply(null, v), mx = Math.max.apply(null, v), sp = (mx - mn) || 1, d = '', last = null;
+    vals.forEach(function (x, i) {
+      if (x == null) return;
+      var px = 4 + i * (w - 8) / (vals.length - 1), py = h - 5 - (x - mn) / sp * (h - 10);
+      d += (d && vals[i - 1] != null ? 'L' : 'M') + px.toFixed(1) + ' ' + py.toFixed(1);
+      last = [px, py];
+    });
+    return '<svg class="spark" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="Tendência dos últimos 12 meses">' +
+      '<path d="' + d + '" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>' +
+      (last ? '<circle cx="' + last[0] + '" cy="' + last[1] + '" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"/>' : '') + '</svg>';
+  }
+  function miniBars(vals) {
+    var w = 72, h = 22, mx = Math.max.apply(null, vals.concat([1])), bw = 4.6, g = 1.6, s = '';
+    vals.forEach(function (v, i) {
+      var bh = v ? Math.max(2, v / mx * (h - 2)) : 1;
+      s += '<rect x="' + (i * (bw + g)).toFixed(1) + '" y="' + (h - bh).toFixed(1) + '" width="' + bw + '" height="' + bh.toFixed(1) + '" rx="1.2" opacity="' + (v ? 1 : .35) + '"/>';
+    });
+    return '<svg class="mini" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="Falhas por mês, de ' + MONTHS[0] + ' a ' + MONTHS[11] + '">' + s + '</svg>';
+  }
+
+  /* ================= KPIs ================= */
+  function renderKpis() {
+    var l = list(), a = agg(l, state.n), m = monthly(l), n = state.n, scoped = state.area !== 'all';
+    var aderN = avg(ADER.slice(12 - n)), bl = BKLG[11];
+    function sDisp(v) { return v >= 97 ? 'ok' : v >= 95.5 ? 'warn' : 'crit'; }
+    function sMtbf(v) { return v >= 25 ? 'ok' : v >= 21 ? 'warn' : 'crit'; }
+    function sMttr(v) { return v <= 8 ? 'ok' : v <= 10 ? 'warn' : 'crit'; }
+    function sAder(v) { return v >= 90 ? 'ok' : v >= 85 ? 'warn' : 'crit'; }
+    function sBl(v) { return v <= 4 ? 'ok' : v <= 5 ? 'warn' : 'crit'; }
+    var cards = [
+      { l: 'Disponibilidade', v: fmt(a.disp, 1), u: '%', m: 'Meta: 97% ou mais', s: sDisp(a.disp), sp: m.disp },
+      { l: 'MTBF', v: fmt(a.mtbf, 0), u: 'dias', m: 'Meta: 25 dias ou mais', s: a.mtbf == null ? 'ok' : sMtbf(a.mtbf), sp: m.mtbf },
+      { l: 'MTTR', v: fmt(a.mttr, 1), u: 'h', m: 'Meta: até 8 h por falha', s: a.mttr == null ? 'ok' : sMttr(a.mttr), sp: m.mttr },
+      { l: 'Falhas no período', v: fmt(a.fail, 0), u: '', m: fmt(a.fail / n, 1) + ' por mês em média', s: null, sp: m.fail },
+      { l: 'Aderência ao plano', v: fmt(aderN, 0), u: '%', m: 'Meta: 90% ou mais', s: sAder(aderN), sp: ADER, plant: scoped },
+      { l: 'Backlog', v: fmt(bl, 1), u: 'semanas', m: 'Meta: até 4 semanas', s: sBl(bl), sp: BKLG, plant: scoped }
+    ];
+    $('#kpis').innerHTML = cards.map(function (c) {
+      return '<div class="card kpi"><div class="k-l">' + c.l + (c.plant ? ' <span class="scope">toda a planta</span>' : '') + '</div>' +
+        '<div class="k-v">' + c.v + (c.u ? '<small>' + c.u + '</small>' : '') + '</div>' +
+        '<div class="k-m">' + c.m + '</div>' + (c.s ? pill(c.s) : '') + spark(c.sp) + '</div>';
+    }).join('');
+  }
+
+  /* ================= GRÁFICOS SVG ================= */
+  function niceStep(r) { var p = Math.pow(10, Math.floor(Math.log10(r))), f = r / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
+  function ticks(min, max, n) {
+    var step = niceStep((max - min) / n || 1), a = Math.floor(min / step) * step, b = Math.ceil(max / step) * step, t = [];
+    for (var v = a; v <= b + 1e-9; v += step) t.push(+v.toFixed(6));
+    return t;
+  }
+
+  function lineChart(el, o) {
+    var W = Math.max(260, el.clientWidth), H = 230, m = { l: 46, r: 14, t: 14, b: 28 }, iw = W - m.l - m.r, ih = H - m.t - m.b;
+    var vals = o.values, n = vals.length, nn = vals.filter(function (v) { return v != null; });
+    var lo = Math.min.apply(null, nn.concat([o.meta])), hi = Math.max.apply(null, nn.concat([o.meta]));
+    if (o.zero) lo = 0; else { var pad = (hi - lo) * .15 || 1; lo -= pad; hi += pad; }
+    var tk = ticks(lo, hi, 4), y0 = tk[0], y1 = tk[tk.length - 1];
+    var X = function (i) { return m.l + i * iw / (n - 1); }, Y = function (v) { return m.t + ih - (v - y0) / (y1 - y0) * ih; };
+    var s = '';
+    tk.forEach(function (t) {
+      s += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + Y(t) + '" y2="' + Y(t) + '" stroke="var(--grid)" stroke-width="1"/>' +
+        '<text class="ax" x="' + (m.l - 8) + '" y="' + (Y(t) + 4) + '" text-anchor="end">' + fmt(t, o.dec) + '</text>';
+    });
+    var every = W < 520 ? 2 : 1;
+    MONTHS.forEach(function (lb, i) { if (i % every === (every === 2 ? 1 : 0) || i === n - 1 && every === 1) s += '<text class="ax" x="' + X(i) + '" y="' + (H - 8) + '" text-anchor="middle">' + lb + '</text>'; });
+    // meta
+    s += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + Y(o.meta) + '" y2="' + Y(o.meta) + '" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="5 4"/>' +
+      '<text class="ax" x="' + (W - m.r) + '" y="' + (Y(o.meta) - 6) + '" text-anchor="end">Meta ' + fmt(o.meta, o.dec) + '</text>';
+    // linha
+    var d = '';
+    vals.forEach(function (v, i) { if (v == null) return; d += (d && vals[i - 1] != null ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1); });
+    s += '<path d="' + d + '" fill="none" stroke="var(--s1)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+    vals.forEach(function (v, i) { if (v != null) s += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"/>'; });
+    // rótulo direto no último ponto
+    var last = vals[n - 1];
+    if (last != null) s += '<text x="' + (X(n - 1)) + '" y="' + (Y(last) + (last >= o.meta ? -12 : 20)) + '" text-anchor="end" font-size="12" font-weight="700" fill="var(--ink)">' + fmt(last, o.dec) + o.unit + '</text>';
+    s += '<line id="xh" y1="' + m.t + '" y2="' + (m.t + ih) + '" stroke="var(--muted)" stroke-width="1" opacity="0"/>' +
+      '<circle id="hd" r="6" fill="var(--s1)" stroke="var(--surface)" stroke-width="2" opacity="0"/>' +
+      '<rect x="' + m.l + '" y="' + m.t + '" width="' + iw + '" height="' + ih + '" fill="transparent" id="hit"/>';
+    el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" height="' + H + '" role="img" aria-label="' + esc(o.aria) + '">' + s + '</svg>';
+    var svg = el.querySelector('svg'), hit = svg.querySelector('#hit'), xh = svg.querySelector('#xh'), hd = svg.querySelector('#hd');
+    function move(ev) {
+      var r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * (W / r.width);
+      var i = Math.max(0, Math.min(n - 1, Math.round((px - m.l) / (iw / (n - 1)))));
+      xh.setAttribute('x1', X(i)); xh.setAttribute('x2', X(i)); xh.setAttribute('opacity', 1);
+      if (vals[i] != null) { hd.setAttribute('cx', X(i)); hd.setAttribute('cy', Y(vals[i])); hd.setAttribute('opacity', 1); } else hd.setAttribute('opacity', 0);
+      showTip('<b>' + MONTHS[i] + '</b><br>' + o.name + ': ' + (vals[i] == null ? 'sem falhas na janela' : fmt(vals[i], o.dec) + o.unit) + '<br>Meta: ' + fmt(o.meta, o.dec) + o.unit + (o.extra ? '<br>' + o.extra(i) : ''), ev.clientX, ev.clientY);
+    }
+    hit.addEventListener('pointermove', move); hit.addEventListener('pointerdown', move);
+    hit.addEventListener('pointerleave', function () { xh.setAttribute('opacity', 0); hd.setAttribute('opacity', 0); hideTip(); });
+  }
+
+  function stackChart(el) {
+    var W = Math.max(260, el.clientWidth), H = 250, m = { l: 40, r: 6, t: 10, b: 28 }, iw = W - m.l - m.r, ih = H - m.t - m.b, n = 12, band = iw / n, bw = Math.min(30, band * .66);
+    var Y = function (v) { return m.t + ih - v / 100 * ih; }, s = '';
+    [0, 25, 50, 75, 100].forEach(function (t) {
+      s += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + Y(t) + '" y2="' + Y(t) + '" stroke="var(--grid)"/><text class="ax" x="' + (m.l - 6) + '" y="' + (Y(t) + 4) + '" text-anchor="end">' + t + '%</text>';
+    });
+    var every = W < 460 ? 2 : 1;
+    for (var i = 0; i < n; i++) {
+      var cx = m.l + band * i + band / 2, x = cx - bw / 2, base = 0;
+      [[MIX_PREV[i], 'var(--s1)'], [MIX_PRED[i], 'var(--s3)'], [MIX_CORR[i], 'var(--s2)']].forEach(function (p, k) {
+        var top = Y(base + p[0]), bot = Y(base), hgt = Math.max(1, bot - top - 2);
+        s += '<rect x="' + x.toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + hgt.toFixed(1) + '" rx="' + (k === 2 ? 3 : 1.5) + '" fill="' + p[1] + '"/>';
+        base += p[0];
+      });
+      if (i % every === (every === 2 ? 1 : 0)) s += '<text class="ax" x="' + cx.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle">' + MONTHS[i] + '</text>';
+      s += '<rect x="' + (m.l + band * i).toFixed(1) + '" y="' + m.t + '" width="' + band.toFixed(1) + '" height="' + ih + '" fill="transparent" data-i="' + i + '" class="hz"/>';
+    }
+    // rótulo direto no último mês
+    s += '<text x="' + (m.l + band * 11 + band / 2) + '" y="' + (Y(MIX_PREV[11] / 2) + 4) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">' + MIX_PREV[11] + '</text>';
+    s += '<text x="' + (m.l + band * 11 + band / 2) + '" y="' + (Y(100 - MIX_CORR[11] / 2) + 4) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">' + MIX_CORR[11] + '</text>';
+    el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" height="' + H + '" role="img" aria-label="Perfil da manutenção por mês: a preventiva sobe de ' + MIX_PREV[0] + '% para ' + MIX_PREV[11] + '% e a corretiva cai de ' + MIX_CORR[0] + '% para ' + MIX_CORR[11] + '%">' + s + '</svg>';
+    el.querySelectorAll('.hz').forEach(function (r) {
+      function mv(ev) {
+        var i = +r.getAttribute('data-i');
+        showTip('<b>' + MONTHS[i] + '</b><br>Preventiva: ' + MIX_PREV[i] + '%<br>Preditiva: ' + MIX_PRED[i] + '%<br>Corretiva: ' + MIX_CORR[i] + '%', ev.clientX, ev.clientY);
+      }
+      r.addEventListener('pointermove', mv); r.addEventListener('pointerdown', mv); r.addEventListener('pointerleave', hideTip);
+    });
+  }
+
+  function renderCharts() {
+    var l = list(), m = monthly(l), scope = state.area === 'all' ? 'toda a planta' : AREAS[state.area];
+    lineChart($('#ch-disp'), { values: m.disp, meta: 97, dec: 1, unit: '%', name: 'Disponibilidade', aria: 'Disponibilidade mensal, ' + scope + ', de ' + MONTHS[0] + ' a ' + MONTHS[11],
+      extra: function (i) { return 'Falhas no mês: ' + m.fail[i]; } });
+    lineChart($('#ch-mtbf'), { values: m.mtbf, meta: 25, dec: 0, unit: ' d', zero: true, name: 'MTBF (3 meses)', aria: 'MTBF em dias, média móvel de 3 meses, ' + scope,
+      extra: function (i) { return 'Falhas no mês: ' + m.fail[i]; } });
+    stackChart($('#ch-mix'));
+  }
+
+  /* ================= PARETO / CAUSAS ================= */
+  function renderPareto() {
+    var down = state.metric === 'down', rows = list().map(function (e) { var c = calc(e, state.n); return { e: e, c: c, v: down ? c.down : c.fail }; })
+      .filter(function (r) { return r.v > 0; }).sort(function (a, b) { return b.v - a.v; });
+    var total = rows.reduce(function (s, r) { return s + r.v; }, 0), top = rows.slice(0, 8), mx = top.length ? top[0].v : 1, cum = 0;
+    $('#pareto').innerHTML = top.map(function (r) {
+      cum += r.v; var cp = Math.round(cum / total * 100), sh = Math.round(r.v / total * 100);
+      var tipTxt = '<b>' + r.e.tag + '</b> ' + esc(r.e.nome) + '<br>' + (down ? fmt(r.c.down, 0) + ' h paradas' : r.c.fail + ' falhas') + ' (' + sh + '% do total)<br>Acumulado: ' + cp + '%';
+      return '<div class="bar-row" data-tip="' + esc(tipTxt) + '"><div class="bar-label"><b>' + r.e.tag + '</b><small>' + esc(r.e.nome) + '</small></div>' +
+        '<div class="bar-track"><div class="bar-fill" style="width:' + (r.v / mx * 100).toFixed(1) + '%"></div></div>' +
+        '<div class="bar-val">' + (down ? fmt(r.v, 0) + ' h' : r.v + ' falhas') + '<small>acum. ' + cp + '%</small></div></div>';
+    }).join('') || '<p class="muted">Sem falhas no período.</p>';
+    var k = 0, acc = 0;
+    rows.forEach(function (r) { if (acc < total * .8) { acc += r.v; k++; } });
+    $('#pareto-note').innerHTML = rows.length ? '<b>' + k + ' de ' + list().length + ' equipamentos</b> concentram 80% ' + (down ? 'das horas paradas' : 'das falhas') + '. ' +
+      (down ? 'Repare como a ordem muda quando o critério é o número de falhas: alta frequência nem sempre significa alto impacto.' : 'Compare com as horas paradas: peça que quebra muito, mas conserta rápido, pesa menos na produção.') : '';
+  }
+
+  function renderCauses() {
+    var tot = {}, sum = 0;
+    CAUSES.forEach(function (c) { tot[c] = 0; });
+    list().forEach(function (e) { var f = calc(e, state.n).fail; e.modes.forEach(function (md) { tot[md[1]] += f * md[2]; sum += f * md[2]; }); });
+    var rows = CAUSES.map(function (c) { return [c, tot[c]]; }).sort(function (a, b) { return b[1] - a[1]; }), mx = rows[0][1] || 1;
+    $('#causes').innerHTML = sum ? rows.map(function (r) {
+      var p = r[1] / sum * 100, tipTxt = '<b>' + r[0] + '</b><br>' + fmt(p, 0) + '% das falhas (≈ ' + Math.round(r[1]) + ' falhas)';
+      return '<div class="bar-row" data-tip="' + esc(tipTxt) + '"><div class="bar-label">' + r[0] + '</div><div class="bar-track"><div class="bar-fill" style="width:' + (r[1] / mx * 100).toFixed(1) + '%"></div></div>' +
+        '<div class="bar-val">' + fmt(p, 0) + '%</div></div>';
+    }).join('') : '<p class="muted">Sem falhas no período.</p>';
+    $('#causes-note').innerHTML = sum ? '<b>' + rows[0][0] + '</b> lidera. A causa vem do registro do modo de falha de cada equipamento; sem esse registro, o plano de manutenção trata o sintoma.' : '';
+  }
+
+  /* ================= TABELA DE EQUIPAMENTOS ================= */
+  function renderTable() {
+    var rows = list().map(function (e) { var c = calc(e, state.n); return { e: e, c: c, st: eqStatus(e, c) }; });
+    var k = state.sort.k, dir = state.sort.dir;
+    var val = function (r) {
+      return k === 'tag' ? r.e.tag : k === 'area' ? AREAS[r.e.area] : k === 'crit' ? r.e.crit : k === 'disp' ? r.c.disp :
+        k === 'mtbf' ? (r.c.mtbf == null ? 1e9 : r.c.mtbf) : k === 'mttr' ? (r.c.mttr == null ? -1 : r.c.mttr) : k === 'fail' ? r.c.fail : ST_ORD[r.st] * 1000 + r.c.disp;
+    };
+    rows.sort(function (a, b) { var x = val(a), y = val(b); return (x < y ? -1 : x > y ? 1 : 0) * dir; });
+    document.querySelectorAll('#eq-table th[data-k]').forEach(function (th) {
+      th.setAttribute('aria-sort', th.getAttribute('data-k') === k ? (dir === 1 ? 'ascending' : 'descending') : 'none');
+    });
+    $('#eq-table tbody').innerHTML = rows.map(function (r) {
+      var e = r.e, c = r.c;
+      return '<tr tabindex="0" data-tag="' + e.tag + '" aria-label="Abrir detalhes de ' + e.tag + '">' +
+        '<td><span class="tag">' + e.tag + '</span><small>' + esc(e.nome) + '</small></td>' +
+        '<td class="hide-s">' + AREAS[e.area] + '</td>' +
+        '<td><span class="crit-badge">' + e.crit + '</span></td>' +
+        '<td class="r num">' + fmt(c.disp, 1) + '%</td>' +
+        '<td class="r num">' + (c.mtbf == null ? '—' : fmt(c.mtbf, 0)) + '</td>' +
+        '<td class="r num hide-s">' + (c.mttr == null ? '—' : fmt(c.mttr, 1)) + '</td>' +
+        '<td class="r num">' + c.fail + '</td>' +
+        '<td class="hide-s">' + miniBars(e.f) + '</td>' +
+        '<td>' + pill(r.st) + '</td></tr>';
+    }).join('');
+  }
+
+  /* ================= DETALHE DO EQUIPAMENTO ================= */
+  function openDetail(tag) {
+    var e = EQ.filter(function (x) { return x.tag === tag; })[0], c = calc(e, state.n), st = eqStatus(e, c), dlg = $('#dlg');
+    var modes = e.modes.map(function (md) {
+      return '<div class="bar-row" style="grid-template-columns:minmax(0,1fr) minmax(70px,150px) 44px"><div class="bar-label">' + esc(md[0]) + '<small>' + md[1] + '</small></div>' +
+        '<div class="bar-track"><div class="bar-fill" style="width:' + (md[2] * 100) + '%"></div></div><div class="bar-val">' + Math.round(md[2] * 100) + '%</div></div>';
+    }).join('');
+    dlg.innerHTML = '<div class="dlg"><div class="dlg-h"><div><h2 id="dlg-title">' + e.tag + ' · ' + esc(e.nome) + '</h2>' +
+      '<p class="muted" style="margin:4px 0 0">' + AREAS[e.area] + ' · Classe ' + e.crit + ' · Meta de disponibilidade ' + META_DISP[e.crit] + '%</p></div>' +
+      '<button class="x" type="button" aria-label="Fechar">×</button></div>' + pill(st) +
+      '<div class="mini-kpis"><div><small>Disponibilidade</small><b>' + fmt(c.disp, 1) + '%</b></div><div><small>MTBF</small><b>' + (c.mtbf == null ? '—' : fmt(c.mtbf, 0) + ' d') + '</b></div>' +
+      '<div><small>MTTR</small><b>' + (c.mttr == null ? '—' : fmt(c.mttr, 1) + ' h') + '</b></div><div><small>Falhas</small><b>' + c.fail + '</b></div></div>' +
+      '<h3>Falhas por mês (12 meses)</h3><div class="chart" id="dlg-ch"></div>' +
+      '<h3 style="margin-top:14px">Principais modos de falha</h3><div class="bars">' + modes + '</div>' +
+      '<div class="reco"><b>Ação recomendada.</b> ' + esc(e.acao) + '<br><span class="muted">Próxima intervenção: ' + esc(e.prox) + '</span></div></div>';
+    dlg.showModal();
+    // gráfico de colunas simples
+    var el = $('#dlg-ch'), W = Math.max(240, el.clientWidth), H = 120, mgn = { l: 24, r: 4, t: 8, b: 22 }, iw = W - mgn.l - mgn.r, ih = H - mgn.t - mgn.b, mx = Math.max(2, Math.max.apply(null, e.f)), band = iw / 12, bw = Math.min(22, band * .62), s = '';
+    [0, mx].forEach(function (t) { var y = mgn.t + ih - t / mx * ih; s += '<line x1="' + mgn.l + '" x2="' + (W - mgn.r) + '" y1="' + y + '" y2="' + y + '" stroke="var(--grid)"/><text class="ax" x="' + (mgn.l - 5) + '" y="' + (y + 4) + '" text-anchor="end">' + t + '</text>'; });
+    e.f.forEach(function (v, i) {
+      var h = v / mx * ih, x = mgn.l + band * i + (band - bw) / 2;
+      s += '<rect x="' + x.toFixed(1) + '" y="' + (mgn.t + ih - h).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(v ? h : 0, 0).toFixed(1) + '" rx="3" fill="var(--s1)"/>' +
+        (W > 400 || i % 2 ? '<text class="ax" x="' + (x + bw / 2).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle">' + MONTHS[i].slice(0, 3) + '</text>' : '') +
+        '<rect x="' + (mgn.l + band * i).toFixed(1) + '" y="' + mgn.t + '" width="' + band.toFixed(1) + '" height="' + ih + '" fill="transparent" data-tip="' + MONTHS[i] + ': ' + v + (v === 1 ? ' falha' : ' falhas') + '"/>';
+    });
+    el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" height="' + H + '" role="img" aria-label="Falhas por mês de ' + e.tag + '">' + s + '</svg>';
+    dlg.querySelector('.x').addEventListener('click', function () { dlg.close(); });
+    dlg.querySelector('.x').focus();
+  }
+  $('#dlg').addEventListener('click', function (ev) { if (ev.target === this) this.close(); });
+  $('#dlg').addEventListener('close', hideTip);
+
+  /* ================= BACKLOG / AÇÕES / TABELA MENSAL ================= */
+  function renderStatic() {
+    var colP = ['var(--s2)', 'var(--s1)', 'var(--s3)', 'var(--grid)'], totP = BL_PRIO.reduce(function (s, r) { return s + r[1]; }, 0);
+    $('#bl-prio').innerHTML = BL_PRIO.map(function (r, i) {
+      return '<div style="flex:' + r[1] + ';background:' + colP[i] + '" data-tip="' + esc('<b>' + r[0] + '</b><br>' + r[1] + ' HH · ' + r[2] + ' OS') + '"></div>';
+    }).join('');
+    $('#bl-prio-rows').innerHTML = BL_PRIO.map(function (r, i) {
+      return '<div><span><i style="background:' + colP[i] + ';border:1px solid var(--line)"></i>' + r[0] + '</span><span>' + r[1] + ' HH · ' + r[2] + ' OS</span></div>';
+    }).join('');
+    var colA = ['#86b6ef', '#3987e5', '#256abf', '#0d366b'];
+    $('#bl-age').innerHTML = BL_AGE.map(function (r, i) {
+      return '<div style="flex:' + r[1] + ';background:' + colA[i] + '" data-tip="' + esc('<b>' + r[0] + '</b><br>' + r[1] + ' HH (' + Math.round(r[1] / totP * 100) + '%)') + '"></div>';
+    }).join('');
+    $('#bl-age-rows').innerHTML = BL_AGE.map(function (r, i) {
+      return '<div><span><i style="background:' + colA[i] + '"></i>' + r[0] + '</span><span>' + r[1] + ' HH</span></div>';
+    }).join('');
+    $('#acts').innerHTML = ACTS.map(function (a) {
+      return '<div class="act"><div class="act-h"><span><b>' + a[0] + '</b> ' + esc(a[1]) + '</span><span class="num">' + a[2] + '%</span></div>' +
+        '<div class="prog" role="progressbar" aria-valuenow="' + a[2] + '" aria-valuemin="0" aria-valuemax="100" aria-label="Progresso da ação em ' + a[0] + '"><div style="width:' + a[2] + '%"></div></div><small>' + esc(a[3]) + '</small></div>';
+    }).join('');
+    var m = monthly(list());
+    $('#month-table').innerHTML = '<thead><tr><th scope="col">Mês</th><th scope="col" class="r">Disp. (%)</th><th scope="col" class="r">Falhas</th><th scope="col" class="r">MTBF 3m (d)</th><th scope="col" class="r">MTTR 3m (h)</th>' +
+      '<th scope="col" class="r">Prev. (%)</th><th scope="col" class="r">Pred. (%)</th><th scope="col" class="r">Corr. (%)</th><th scope="col" class="r">Aderência (%)</th><th scope="col" class="r">Backlog (sem.)</th></tr></thead><tbody>' +
+      MONTHS.map(function (lb, i) {
+        return '<tr style="cursor:default"><td>' + lb + '</td><td class="r num">' + fmt(m.disp[i], 1) + '</td><td class="r num">' + m.fail[i] + '</td><td class="r num">' + fmt(m.mtbf[i], 0) + '</td><td class="r num">' + fmt(m.mttr[i], 1) + '</td>' +
+          '<td class="r num">' + MIX_PREV[i] + '</td><td class="r num">' + MIX_PRED[i] + '</td><td class="r num">' + MIX_CORR[i] + '</td><td class="r num">' + ADER[i] + '</td><td class="r num">' + fmt(BKLG[i], 1) + '</td></tr>';
+      }).join('') + '</tbody>';
+  }
+
+  /* ================= EVENTOS ================= */
+  function buildAreaSeg() {
+    var h = '<button type="button" data-a="all" aria-pressed="true">Toda a planta</button>';
+    Object.keys(AREAS).forEach(function (k) { h += '<button type="button" data-a="' + k + '" aria-pressed="false">' + AREAS[k] + '</button>'; });
+    $('#seg-area').innerHTML = h;
+  }
+  function press(seg, attr, val) {
+    seg.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute(attr) === String(val))); });
+  }
+  $('#seg-period').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; state.n = +b.dataset.n; press(this, 'data-n', state.n); renderAll(); });
+  $('#seg-area').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; state.area = b.dataset.a; press(this, 'data-a', state.area); renderAll(); });
+  $('#seg-metric').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; state.metric = b.dataset.m; press(this, 'data-m', state.metric); renderPareto(); });
+  $('#eq-table thead').addEventListener('click', function (ev) {
+    var th = ev.target.closest('th[data-k]'); if (!th) return;
+    var k = th.dataset.k;
+    if (state.sort.k === k) state.sort.dir *= -1; else { state.sort.k = k; state.sort.dir = (k === 'fail' || k === 'mttr') ? -1 : 1; }
+    renderTable();
+  });
+  $('#eq-table tbody').addEventListener('click', function (ev) { var tr = ev.target.closest('tr[data-tag]'); if (tr) openDetail(tr.dataset.tag); });
+  $('#eq-table tbody').addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    var tr = ev.target.closest('tr[data-tag]'); if (tr) { ev.preventDefault(); openDetail(tr.dataset.tag); }
+  });
+
+  function renderAll() { renderKpis(); renderCharts(); renderPareto(); renderCauses(); renderTable(); renderStatic(); }
+  buildAreaSeg();
+  renderAll();
+
+  // redesenha os gráficos quando a largura real do contêiner muda
+  var chartEls = ['#ch-disp', '#ch-mtbf', '#ch-mix'].map($), raf;
+  function stamp() { chartEls.forEach(function (el) { el._w = el.clientWidth; }); }
+  stamp();
+  function check() {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(function () {
+      if (chartEls.some(function (el) { return Math.abs(el.clientWidth - el._w) > 1; })) { renderCharts(); stamp(); }
+    });
+  }
+  if (window.ResizeObserver) { var ro = new ResizeObserver(check); chartEls.forEach(function (el) { ro.observe(el); }); }
+  window.addEventListener('resize', check);
+})();
+</script>
+</body>
+</html>
