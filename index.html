@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marco Zero | Consultoria Industrial</title>
+<meta name="description" content="Consultoria industrial em manutenção, confiabilidade de ativos e planejamento de paradas. Diagnóstico, plano e acompanhamento com indicadores.">
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --surface: #ffffff;
+    --ink: #14202b;
+    --muted: #55626e;
+    --line: #dcdad3;
+    --brand: #12324a;
+    --brand-ink: #ffffff;
+    --accent: #e2711d;
+    --accent-ink: #1a0f05;
+    --todo-bg: #fff3b8;
+    --todo-ink: #5a4500;
+    --radius: 10px;
+    --maxw: 1080px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1820;
+      --surface: #16222d;
+      --ink: #e8ecef;
+      --muted: #9aa8b4;
+      --line: #263644;
+      --brand: #0b2233;
+      --brand-ink: #ffffff;
+      --accent: #f08a3c;
+      --accent-ink: #1a0f05;
+      --todo-bg: #4a3c0a;
+      --todo-ink: #ffe9a0;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  a { color: inherit; }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 16px; }
+  h1, h2, h3 { line-height: 1.2; margin: 0 0 .5em; letter-spacing: -.01em; }
+  h1 { font-size: clamp(2rem, 5vw, 3.2rem); }
+  h2 { font-size: clamp(1.5rem, 3.2vw, 2.1rem); }
+  h3 { font-size: 1.15rem; }
+  p { margin: 0 0 1em; }
+  .eyebrow {
+    display: inline-block; font-size: .78rem; font-weight: 700; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: .8rem;
+  }
+  .todo {
+    background: var(--todo-bg); color: var(--todo-ink);
+    padding: 0 .3em; border-radius: 4px; font-weight: 600;
+  }
+
+  /* header */
+  header.top {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .top .wrap { display: flex; align-items: center; justify-content: space-between; height: 62px; gap: 12px; }
+  .logo { font-weight: 800; letter-spacing: .04em; text-decoration: none; display: flex; align-items: center; gap: 10px; }
+  .logo i { width: 14px; height: 14px; background: var(--accent); display: inline-block; transform: rotate(45deg); }
+  nav ul { list-style: none; display: flex; gap: 22px; margin: 0; padding: 0; align-items: center; }
+  nav a { text-decoration: none; font-size: .95rem; color: var(--muted); }
+  nav a:hover { color: var(--ink); }
+  .btn {
+    display: inline-block; text-decoration: none; font-weight: 700;
+    padding: .75em 1.3em; border-radius: var(--radius); border: 2px solid transparent;
+    background: var(--accent); color: var(--accent-ink);
+  }
+  .btn:hover { filter: brightness(1.06); }
+  .btn.ghost { background: transparent; color: inherit; border-color: currentColor; }
+  nav .btn { padding: .5em 1em; color: var(--accent-ink); white-space: nowrap; }
+  .logo { font-size: .95rem; }
+  nav a.btn:hover { color: var(--accent-ink); }
+  .btn.sm { padding: .5em 1em; font-size: .92rem; }
+  .card .card-cta { margin: auto 0 0; padding-top: 1rem; }
+  .card .card-cta .btn { color: var(--accent-ink); }
+
+  /* hero */
+  .hero { background: var(--brand); color: var(--brand-ink); padding: 72px 0 64px; }
+  .hero .grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 40px; align-items: center; }
+  .hero p.lead { font-size: 1.15rem; color: #cfdbe5; max-width: 34em; }
+  .hero .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 1.5rem; }
+  .stat {
+    background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.18);
+    border-radius: var(--radius); padding: 24px;
+  }
+  .stat .big { font-size: 2.6rem; font-weight: 800; color: var(--accent); line-height: 1.1; }
+  .stat .big small { font-size: 1rem; color: #cfdbe5; font-weight: 600; }
+  .stat p { margin: .6rem 0 0; color: #cfdbe5; font-size: .95rem; }
+
+  section { padding: 64px 0; }
+  section.alt { background: var(--surface); border-block: 1px solid var(--line); }
+  .section-head { max-width: 40em; margin-bottom: 2rem; }
+  .section-head p { color: var(--muted); }
+
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 24px; display: flex; flex-direction: column;
+  }
+  section.alt .card { background: var(--bg); }
+  .card .tag { font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: .5rem; }
+  .card ul { margin: .4rem 0 0; padding-left: 1.1em; color: var(--muted); }
+  .card li { margin-bottom: .3em; }
+  .card p { color: var(--muted); }
+
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; counter-reset: s; }
+  .step { border-top: 3px solid var(--accent); padding-top: 14px; }
+  .step::before {
+    counter-increment: s; content: "0" counter(s);
+    display: block; font-weight: 800; color: var(--accent); margin-bottom: .3rem;
+  }
+  .step p { color: var(--muted); font-size: .95rem; }
+
+  .people { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+  .person { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; }
+  .person .head { display: flex; gap: 16px; align-items: center; margin-bottom: 1rem; }
+  .avatar {
+    width: 64px; height: 64px; border-radius: 50%; background: var(--brand); color: #fff;
+    display: grid; place-items: center; font-weight: 800; font-size: 1.3rem; flex: none;
+  }
+  .person .role { color: var(--accent); font-weight: 700; font-size: .9rem; }
+  .person ul { padding-left: 1.1em; color: var(--muted); margin: .5rem 0 1rem; }
+  .person li { margin-bottom: .3em; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: .78rem; border: 1px solid var(--line); border-radius: 99px; padding: .15em .7em; color: var(--muted); }
+  .person a.in { font-weight: 700; font-size: .92rem; }
+  .person.wide { grid-column: 1 / -1; }
+
+  .case { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  .case .card h3 { margin-bottom: .2em; }
+  .case .result { font-size: 1.7rem; font-weight: 800; color: var(--accent); margin: .2rem 0 .6rem; }
+
+  .sectors { display: flex; flex-wrap: wrap; gap: 10px; }
+  .sectors span { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: .5em 1em; font-weight: 600; }
+
+  .cta { background: var(--brand); color: var(--brand-ink); text-align: center; }
+  .cta p { color: #cfdbe5; max-width: 34em; margin-inline: auto; }
+  .cta .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 1.4rem; }
+  .cta .btn.ghost { color: #fff; }
+
+  footer { padding: 26px 0; color: var(--muted); font-size: .9rem; border-top: 1px solid var(--line); }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+  @media (max-width: 860px) {
+    .hero .grid, .people, .case { grid-template-columns: 1fr; }
+    .cards { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: repeat(2, 1fr); }
+    nav li.hide-s { display: none; }
+    section { padding: 48px 0; }
+    .hero { padding: 48px 0 44px; }
+  }
+  @media (max-width: 480px) {
+    .steps { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="#topo"><i></i><span>MARCO ZERO</span></a>
+    <nav aria-label="Principal">
+      <ul>
+        <li class="hide-s"><a href="#servicos">Serviços</a></li>
+        <li class="hide-s"><a href="#metodo">Como trabalhamos</a></li>
+        <li class="hide-s"><a href="#socios">Equipe</a></li>
+        <li class="hide-s"><a href="#resultados">Resultados</a></li>
+        <li><a class="btn" href="#contato">Fale conosco</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="topo">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="wrap grid">
+      <div>
+        <span class="eyebrow">Consultoria industrial</span>
+        <h1>Menos parada não planejada. Mais previsibilidade na operação.</h1>
+        <p class="lead">Ajudamos indústrias e prestadoras de serviço a organizar a manutenção, aumentar a confiabilidade dos ativos, resolver falhas em equipamentos rotativos e planejar paradas com prazo, custo e escopo sob controle.</p>
+        <div class="actions">
+          <a class="btn" href="#contato">Agendar uma conversa</a>
+          <a class="btn ghost" href="#servicos">Ver serviços</a>
+          <a class="btn ghost" href="painel-confiabilidade.html">Ver painel de exemplo</a>
+        </div>
+      </div>
+      <aside class="stat" aria-label="Resultado em destaque">
+        <div class="big">15 → 160 <small>dias de MTBF</small></div>
+        <p>Tempo médio entre falhas de um equipamento crítico em uma grande planta de fertilizantes, com plano de manutenção baseado em análise de falhas e acompanhamento de indicadores.</p>
+      </aside>
+    </div>
+  </div>
+
+  <!-- SERVIÇOS -->
+  <section id="servicos">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Serviços</span>
+        <h2>Quatro frentes, do dia a dia à parada geral</h2>
+        <p>Atuamos de forma enxuta: diagnóstico objetivo, plano claro e acompanhamento com números.</p>
+      </div>
+      <div class="cards">
+        <article class="card">
+          <div class="tag">Paradas</div>
+          <h3>Planejamento e gestão de paradas</h3>
+          <p>Da definição do escopo ao pós-parada, para entregar no prazo e dentro do orçamento.</p>
+          <ul>
+            <li>Escopo, cronograma e caminho crítico</li>
+            <li>Mobilização de equipes e contratadas</li>
+            <li>Acompanhamento diário e relatório de encerramento</li>
+          </ul>
+        </article>
+        <article class="card">
+          <div class="tag">Confiabilidade</div>
+          <h3>Confiabilidade e gestão de ativos</h3>
+          <p>Descobrir por que o equipamento falha e definir o que fazer para que não falhe de novo.</p>
+          <ul>
+            <li>Análise de falhas: FMEA, FMECA e RCM</li>
+            <li>MTBF, MTTR, bad actors e backlog</li>
+            <li>Plano de manutenção preventiva e preditiva</li>
+          </ul>
+          <p class="card-cta"><a class="btn sm" href="painel-confiabilidade.html">Ver painel de confiabilidade (exemplo)</a></p>
+        </article>
+        <article class="card">
+          <div class="tag">Rotativos</div>
+          <h3>Equipamentos rotativos</h3>
+          <p>Mais de 40 anos de experiência de campo para entender e corrigir falhas que se repetem em equipamentos rotativos.</p>
+          <ul>
+            <li>Análise de falhas e causa raiz</li>
+            <li>Revisão de padrões e planos de manutenção</li>
+            <li>Apoio técnico em campo e parecer sobre falhas recorrentes</li>
+          </ul>
+        </article>
+        <article class="card">
+          <div class="tag">Rotina</div>
+          <h3>Gestão da rotina e das contratadas</h3>
+          <p>Estrutura para a manutenção funcionar todo dia, com processos, indicadores e painéis.</p>
+          <ul>
+            <li>Planejamento e programação da rotina</li>
+            <li>Procedimentos, fluxos e matriz de competências</li>
+            <li>Painéis de gestão e automação de relatórios</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- MÉTODO -->
+  <section id="metodo" class="alt">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Como trabalhamos</span>
+        <h2>Começamos pequeno e medimos tudo</h2>
+        <p>O primeiro passo é um diagnóstico curto, sem compromisso de projeto longo. Se fizer sentido, seguimos para o plano e a execução.</p>
+      </div>
+      <div class="steps">
+        <div class="step"><h3>Diagnóstico</h3><p>Visita, conversa com a equipe e leitura dos dados de manutenção e de falhas.</p></div>
+        <div class="step"><h3>Plano</h3><p>Prioridades, metas e indicadores definidos junto com o seu time.</p></div>
+        <div class="step"><h3>Execução</h3><p>Acompanhamento próximo ou apoio pontual, conforme a sua necessidade.</p></div>
+        <div class="step"><h3>Resultado</h3><p>Indicadores revisados e rotina deixada de pé para o time seguir sozinho.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SÓCIOS -->
+  <section id="socios">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Equipe</span>
+        <h2>Experiência de chão de fábrica e de gestão</h2>
+      </div>
+      <div class="people">
+        <article class="person">
+          <div class="head">
+            <div class="avatar" aria-hidden="true">DB</div>
+            <div>
+              <h3 style="margin:0">Diego Barbosa</h3>
+              <div class="role">Paradas, rotina e gestão industrial</div>
+            </div>
+          </div>
+          <p>Profissional com ampla experiência na área industrial, em gestão, planejamento da rotina de manutenção e planejamento de paradas. <span class="todo">[Completar: formação, anos de experiência, empresas e setores onde atuou.]</span></p>
+          <ul>
+            <li>Planejamento e gestão de paradas</li>
+            <li>Planejamento e programação da rotina de manutenção</li>
+            <li>Gestão de equipes e contratadas</li>
+            <li><span class="todo">[Resultado ou marco profissional do Diego]</span></li>
+          </ul>
+          <div class="chips">
+            <span class="chip"><span class="todo">Formação</span></span>
+            <span class="chip"><span class="todo">Certificações</span></span>
+          </div>
+          <p style="margin-top:1rem"><a class="in" href="https://www.linkedin.com/in/PERFIL-DO-DIEGO" target="_blank" rel="noopener"><span class="todo">LinkedIn do Diego</span></a></p>
+        </article>
+
+        <article class="person">
+          <div class="head">
+            <div class="avatar" aria-hidden="true">RO</div>
+            <div>
+              <h3 style="margin:0">Renan Oliveira</h3>
+              <div class="role">Confiabilidade, indicadores e gestão</div>
+            </div>
+          </div>
+          <p>Engenheiro mecânico com mais de 12 anos em manutenção industrial. Atuou em plantas de fertilizantes como analista de engenharia de manutenção, coordenador e preposto de contratada, e hoje lidera operações e a estrutura administrativa de uma empresa de manutenção.</p>
+          <ul>
+            <li>Análise de falhas com FMEA, FMECA e RCM</li>
+            <li>Gestão de equipe de manutenção em ambiente industrial de grande porte</li>
+            <li>Painéis de gestão com Google Apps Script e IA aplicada</li>
+            <li>NR-1, GRO e PGR</li>
+          </ul>
+          <div class="chips">
+            <span class="chip">Engenharia Mecânica</span>
+            <span class="chip">Inglês avançado</span>
+            <span class="chip">TPM · PDCA</span>
+          </div>
+          <p style="margin-top:1rem"><a class="in" href="https://www.linkedin.com/in/SEU-PERFIL" target="_blank" rel="noopener"><span class="todo">LinkedIn do Renan</span></a></p>
+        </article>
+
+        <article class="person wide">
+          <div class="head">
+            <div class="avatar" aria-hidden="true">MB</div>
+            <div>
+              <h3 style="margin:0">Marcelo Barbosa</h3>
+              <div class="role">Equipamentos rotativos e análise de falhas</div>
+            </div>
+          </div>
+          <p>Supervisor de manutenção com mais de 40 anos de experiência em equipamentos rotativos. Já atuou com o Renan em análises de falhas e na revisão de padrões de manutenção. <span class="todo">[Completar: empresas, plantas e tipos de equipamento em que atuou.]</span></p>
+          <ul>
+            <li>Diagnóstico de falhas em equipamentos rotativos</li>
+            <li>Revisão de padrões e planos de manutenção</li>
+            <li>Supervisão de equipes de manutenção</li>
+          </ul>
+          <div class="chips">
+            <span class="chip">Equipamentos rotativos</span>
+            <span class="chip">Mais de 40 anos de experiência</span>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTADOS -->
+  <section id="resultados" class="alt">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Resultados</span>
+        <h2>Casos em que atuamos</h2>
+        <p>Casos descritos sem identificar o cliente.</p>
+      </div>
+      <div class="case">
+        <article class="card">
+          <div class="tag">Confiabilidade</div>
+          <h3>Equipamento crítico em planta de fertilizantes</h3>
+          <div class="result">MTBF de 15 para 160 dias</div>
+          <p>Coordenação da equipe de manutenção alocada na planta, com relatórios de MTBF, MTTR, bad actors, backlog e custos. A contratada alcançou o recorde de produção entre os transportadores da unidade.</p>
+        </article>
+        <article class="card">
+          <div class="tag">Paradas</div>
+          <h3><span class="todo">[Caso do Diego]</span></h3>
+          <div class="result"><span class="todo">[Resultado medido]</span></div>
+          <p><span class="todo">[Descrever o contexto, o que foi feito e o resultado, sem citar o cliente.]</span></p>
+        </article>
+      </div>
+
+      <div style="margin-top:2.2rem">
+        <h3>Setores</h3>
+        <div class="sectors">
+          <span>Fertilizantes e química</span>
+          <span>Portos e logística</span>
+          <span>Mineração</span>
+          <span>Prestadoras de serviço industrial</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTATO -->
+  <section id="contato" class="cta">
+    <div class="wrap">
+      <h2>Vamos conversar sobre a sua operação?</h2>
+      <p>Conte qual é o problema que mais custa caro hoje: falha repetida, parada que estoura prazo ou rotina desorganizada. Retornamos com uma proposta de diagnóstico.</p>
+      <div class="actions">
+        <a class="btn" href="https://wa.me/5513974058497" target="_blank" rel="noopener">WhatsApp</a>
+        <a class="btn ghost" href="mailto:renanoliveira1967@gmail.com?subject=Contato%20pelo%20site">E-mail</a>
+        <a class="btn ghost" href="https://www.linkedin.com/company/SUA-PAGINA" target="_blank" rel="noopener">LinkedIn</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Marco Zero Consultoria Industrial · <span class="todo">CNPJ</span></span>
+    <span>Sorocaba, SP · Baixada Santista</span>
+  </div>
+</footer>
+
+</body>
+</html>
